@@ -197,6 +197,23 @@ ruleEntreDatetimeEtDatetimeInterval = Rule
       _ -> Nothing
   }
 
+ruleDesdeDatetimeEtDatetimeInterval :: Rule
+ruleDesdeDatetimeEtDatetimeInterval = Rule
+  { name = "desde <datetime> et <datetime> (interval)"
+  , pattern =
+    [ regex "Desde|del|de"
+    , dimension Time
+    , regex "hasta|al|a"
+    , dimension Time
+    ]
+  , prod = \tokens -> case tokens of
+      (_:Token Time td1:_:Token Time td2:_) ->
+        Token Time <$> interval TTime.Open td1 td2
+      _ -> Nothing
+  }
+
+
+
 ruleHhhmmTimeofday :: Rule
 ruleHhhmmTimeofday = Rule
   { name = "hh(:|.|h)mm (time-of-day)"
@@ -210,6 +227,8 @@ ruleHhhmmTimeofday = Rule
         tt $ hourMinute True h m
       _ -> Nothing
   }
+
+
 
 ruleElDayofmonthDeNamedmonth :: Rule
 ruleElDayofmonthDeNamedmonth = Rule
@@ -1088,6 +1107,59 @@ ruleEntreDdEtDdMonthinterval = Rule
         Token Time <$> interval TTime.Closed from to
       _ -> Nothing
   }
+ruleDesdeDdalDdMonthinterval :: Rule
+ruleDesdeDdalDdMonthinterval = Rule
+  { name = "desde dd al dd <month>(interval)"
+  , pattern =
+    [ regex "Desde( el?)|del|de el"
+    , regex "(0?[1-9]|[12]\\d|3[01])"
+    , regex "hasta (el ?)|al|a el"
+    , regex "(0?[1-9]|[12]\\d|3[01])"
+    , regex "de"
+    , Predicate isAMonth
+    ]
+  , prod = \tokens -> case tokens of
+      (_:
+       Token RegexMatch (GroupMatch (m1:_)):
+       _:
+       Token RegexMatch (GroupMatch (m2:_)):
+       _:
+       Token Time td:
+       _) -> do
+        v1 <- parseInt m1
+        v2 <- parseInt m2
+        from <- intersect (dayOfMonth v1) td
+        to <- intersect (dayOfMonth v2) td
+        
+        Token Time <$> interval TTime.Closed from to
+      _ -> Nothing
+  }
+
+
+ruleDesdeDdalDdinterval :: Rule
+ruleDesdeDdalDdinterval = Rule
+  { name = "desde dd al dd <month>(interval)"
+  , pattern =
+    [ regex "desde( el?)|del|de el"
+    , Predicate isDOMInteger
+    , regex "hasta( el?)|al|a el"
+    , Predicate isDOMInteger
+
+    ]
+  , prod = \tokens -> case tokens of
+      (_:
+       m1:
+       _:
+       m2:_
+       ) -> do
+        d1 <- getIntValue m1
+        d2 <- getIntValue m2
+
+        -- from <- intersect (dayOfMonth v1) $ cycleNth TG.Day 1
+        -- to <- intersect (dayOfMonth v2) $ cycleNth TG.Day 1
+        Token Time <$> interval TTime.Open (dayOfMonth d1) (dayOfMonth d2)
+      _ -> Nothing
+  }
 
 ruleMonthDOM :: Rule
 ruleMonthDOM = Rule
@@ -1575,13 +1647,9 @@ rules =
   , ruleAfternoon
   , ruleAnoNuevo
   , ruleCeTime
-  , ruleDatetimeDatetimeInterval
   , ruleDayOfMonthSt
   , ruleDayofweekDayofmonth
-  , ruleDdddMonthinterval
-  , ruleDdmm
-  , ruleDdmmyyyy
-  , ruleDeDatetimeDatetimeInterval
+  , ruleDesdeDdalDdinterval
   , ruleDelMedioda
   , ruleDelYear
   , ruleDentroDeDuration
@@ -1599,7 +1667,15 @@ rules =
   , ruleElTime
   , ruleEnDuration
   , ruleEntreDatetimeEtDatetimeInterval
+  , ruleDesdeDdalDdMonthinterval
   , ruleEntreDdEtDdMonthinterval
+  , ruleDesdeDatetimeEtDatetimeInterval
+  , ruleDdddMonthinterval
+  , ruleDatetimeDatetimeInterval
+
+  , ruleDdmm
+  , ruleDdmmyyyy
+  , ruleDeDatetimeDatetimeInterval
   , ruleEsteenUnCycle
   , ruleEvening
   , ruleHaceDuration

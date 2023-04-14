@@ -127,6 +127,11 @@ timeMonth n = mkMonthPredicate n
 timeYear :: Int -> TTime.Predicate
 timeYear n = mkYearPredicate n
 
+
+dayOfMonthOrDefault :: Int -> Maybe TimeData -> TimeData
+dayOfMonthOrDefault defaultValue maybeTimeData =
+  fromMaybe (dayOfMonth defaultValue) maybeTimeData
+
 -- | Takes `n` cycles of `f`
 takeN :: Int -> Bool -> TTime.Predicate -> TTime.Predicate
 takeN n notImmediate f = mkSeriesPredicate series
