@@ -15,6 +15,7 @@ module Duckling.Time.ES.Rules
   ) where
 
 import Prelude
+
 import qualified Data.Text as Text
 
 import Duckling.Dimensions.Types
@@ -28,6 +29,10 @@ import Duckling.Types
 import qualified Duckling.Ordinal.Types as TOrdinal
 import qualified Duckling.Time.Types as TTime
 import qualified Duckling.TimeGrain.Types as TG
+
+
+
+
 
 ruleTheDayAfterTomorrow :: Rule
 ruleTheDayAfterTomorrow = Rule
@@ -85,7 +90,7 @@ ruleMonths = mkRuleMonths
   , ( "Junio"     , "junio|jun\\.?")
   , ( "Julio"     , "julio|jul\\.?")
   , ( "Agosto"    , "agosto|ago\\.?")
-  , ( "Septiembre", "septiembre|sept?\\.?")
+  , ( "Septiembre", "sepiembre|septiembre|sept?\\.?")
   , ( "Octubre"   , "octubre|oct\\.?")
   , ( "Noviembre" , "noviembre|nov\\.?")
   , ( "Diciembre" , "diciembre|dic\\.?")
@@ -182,6 +187,9 @@ ruleUltimoDayofweekDeTime = Rule
       _ -> Nothing
   }
 
+
+
+
 ruleEntreDatetimeEtDatetimeInterval :: Rule
 ruleEntreDatetimeEtDatetimeInterval = Rule
   { name = "entre <datetime> et <datetime> (interval)"
@@ -196,6 +204,62 @@ ruleEntreDatetimeEtDatetimeInterval = Rule
         Token Time <$> interval TTime.Open td1 td2
       _ -> Nothing
   }
+
+
+ruleDesdeDdalDdMonthinterval :: Rule
+ruleDesdeDdalDdMonthinterval = Rule
+  { name = "desde dd al dd <month>(interval)"
+  , pattern =
+    [ regex "Desde( el?)|del|de el"
+    , Predicate isDOMInteger
+    , regex "hasta (el ?)|al|a el"
+    , Predicate isDOMInteger
+    , regex "de"
+    , Predicate isAMonth
+    ]
+  , prod = \tokens -> case tokens of
+      (_:
+       m1:
+       _:
+       m2:
+       _:
+       Token Time td:
+       _) -> do
+        v1 <- getIntValue m1
+        v2 <- getIntValue m2
+        from <- intersect (dayOfMonth v1) td
+        to <- intersect (dayOfMonth v2) td
+        
+        Token Time <$> interval TTime.Closed from to
+      _ -> Nothing
+  }
+
+
+ruleDesdeDdalDdinterval :: Rule
+ruleDesdeDdalDdinterval = Rule
+  { name = "desde dd al dd <month>(interval)"
+  , pattern =
+    [ regex "desde( el?)|del|de el"
+    , Predicate isDOMInteger
+    , regex "hasta( el?)|al|a el"
+    , Predicate isDOMInteger
+
+    ]
+  , prod = \tokens -> case tokens of
+      (_:
+       m1:
+       _:
+       m2:_
+       ) -> do
+        d1 <- getIntValue m1
+        d2 <- getIntValue m2
+
+        -- from <- intersect (dayOfMonth v1) $ cycleNth TG.Day 1
+        -- to <- intersect (dayOfMonth v2) $ cycleNth TG.Day 1
+        Token Time <$> interval TTime.Open (dayOfMonth d1) (dayOfMonth d2)
+      _ -> Nothing
+  }
+
 
 ruleDesdeDatetimeEtDatetimeInterval :: Rule
 ruleDesdeDatetimeEtDatetimeInterval = Rule
@@ -665,7 +729,7 @@ ruleTimeofdayLatent = Rule
   , prod = \tokens -> case tokens of
       (token:_) -> do
         v <- getIntValue token
-        tt . mkLatent $ hour (v < 13) v
+        tt . mkLatent $ hour (v < 12) v
       _ -> Nothing
   }
 
@@ -1085,81 +1149,29 @@ ruleEntreDdEtDdMonthinterval :: Rule
 ruleEntreDdEtDdMonthinterval = Rule
   { name = "entre dd et dd <month>(interval)"
   , pattern =
-    [ regex "entre( el)?"
-    , regex "(0?[1-9]|[12]\\d|3[01])"
-    , regex "y( el)?"
-    , regex "(0?[1-9]|[12]\\d|3[01])"
+    [ regex "entre( el?)"
+    , Predicate isDOMInteger
+    , regex "y( el?)"
+    , Predicate isDOMInteger
     , regex "de"
     , Predicate isAMonth
-    ]
-  , prod = \tokens -> case tokens of
-      (_:
-       Token RegexMatch (GroupMatch (m1:_)):
-       _:
-       Token RegexMatch (GroupMatch (m2:_)):
-       _:
-       Token Time td:
-       _) -> do
-        v1 <- parseInt m1
-        v2 <- parseInt m2
-        from <- intersect (dayOfMonth v1) td
-        to <- intersect (dayOfMonth v2) td
-        Token Time <$> interval TTime.Closed from to
-      _ -> Nothing
-  }
-ruleDesdeDdalDdMonthinterval :: Rule
-ruleDesdeDdalDdMonthinterval = Rule
-  { name = "desde dd al dd <month>(interval)"
-  , pattern =
-    [ regex "Desde( el?)|del|de el"
-    , regex "(0?[1-9]|[12]\\d|3[01])"
-    , regex "hasta (el ?)|al|a el"
-    , regex "(0?[1-9]|[12]\\d|3[01])"
-    , regex "de"
-    , Predicate isAMonth
-    ]
-  , prod = \tokens -> case tokens of
-      (_:
-       Token RegexMatch (GroupMatch (m1:_)):
-       _:
-       Token RegexMatch (GroupMatch (m2:_)):
-       _:
-       Token Time td:
-       _) -> do
-        v1 <- parseInt m1
-        v2 <- parseInt m2
-        from <- intersect (dayOfMonth v1) td
-        to <- intersect (dayOfMonth v2) td
-        
-        Token Time <$> interval TTime.Closed from to
-      _ -> Nothing
-  }
-
-
-ruleDesdeDdalDdinterval :: Rule
-ruleDesdeDdalDdinterval = Rule
-  { name = "desde dd al dd <month>(interval)"
-  , pattern =
-    [ regex "desde( el?)|del|de el"
-    , Predicate isDOMInteger
-    , regex "hasta( el?)|al|a el"
-    , Predicate isDOMInteger
-
     ]
   , prod = \tokens -> case tokens of
       (_:
        m1:
        _:
-       m2:_
-       ) -> do
-        d1 <- getIntValue m1
-        d2 <- getIntValue m2
-
-        -- from <- intersect (dayOfMonth v1) $ cycleNth TG.Day 1
-        -- to <- intersect (dayOfMonth v2) $ cycleNth TG.Day 1
-        Token Time <$> interval TTime.Open (dayOfMonth d1) (dayOfMonth d2)
+       m2:
+       _:
+       Token Time td:
+       _) -> do
+        v1 <- getIntValue m1
+        v2 <- getIntValue m2
+        from <- intersect (dayOfMonth v1) td
+        to <- intersect (dayOfMonth v2) td
+        Token Time <$> interval TTime.Closed from to
       _ -> Nothing
   }
+
 
 ruleMonthDOM :: Rule
 ruleMonthDOM = Rule
@@ -1649,7 +1661,6 @@ rules =
   , ruleCeTime
   , ruleDayOfMonthSt
   , ruleDayofweekDayofmonth
-  , ruleDesdeDdalDdinterval
   , ruleDelMedioda
   , ruleDelYear
   , ruleDentroDeDuration
@@ -1665,17 +1676,18 @@ rules =
   , ruleElDayofmonthNonOrdinal
   , ruleElProximoCycle
   , ruleElTime
-  , ruleEnDuration
-  , ruleEntreDatetimeEtDatetimeInterval
-  , ruleDesdeDdalDdMonthinterval
-  , ruleEntreDdEtDdMonthinterval
-  , ruleDesdeDatetimeEtDatetimeInterval
+  , ruleEnDuration 
   , ruleDdddMonthinterval
   , ruleDatetimeDatetimeInterval
-
   , ruleDdmm
-  , ruleDdmmyyyy
-  , ruleDeDatetimeDatetimeInterval
+  , ruleDdmmyyyy  
+  , ruleEntreDatetimeEtDatetimeInterval
+  , ruleDesdeDatetimeEtDatetimeInterval
+  , ruleDesdeDdalDdMonthinterval
+  , ruleEntreDdEtDdMonthinterval
+  , ruleDesdeDdalDdinterval
+
+  , ruleDeDatetimeDatetimeInterval 
   , ruleEsteenUnCycle
   , ruleEvening
   , ruleHaceDuration
