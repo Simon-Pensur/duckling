@@ -9,6 +9,7 @@
 {-# LANGUAGE NoRebindableSyntax #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Duckling.Time.ES.Rules
   ( rules
@@ -29,6 +30,8 @@ import Duckling.Types
 import qualified Duckling.Ordinal.Types as TOrdinal
 import qualified Duckling.Time.Types as TTime
 import qualified Duckling.TimeGrain.Types as TG
+import qualified Duckling.Duration.Types as TDuration
+import Duckling.Duration.Types (DurationData(..))
 
 
 
@@ -55,6 +58,61 @@ ruleHaceDuration = Rule
         tt $ durationAgo dd
       _ -> Nothing
   }
+
+ruleDurationAgo :: Rule
+ruleDurationAgo = Rule
+  { name = "ultima <duration> "
+  , pattern =
+    [regex "((u|ú)ltim(a|o)s?)"
+    , dimension Duration
+    ]
+  , prod = \tokens -> case tokens of
+      (_:
+       Token Duration dd:
+       _) -> 
+
+        Token Time <$> interval TTime.Open  (durationBefore dd) now
+      _ -> Nothing
+  }
+
+-- ruleGrainAgo :: Rule
+-- ruleLaCyclePasado = Rule
+--   { name = "la <grain> pasado"
+--   , pattern =
+--     [ regex "(el|los|la|las) ?"
+--     , dimension TimeGrain
+--     , regex "pasad(a|o)s?|(u|ú)ltim[ao]s?"
+--     ]
+--   , prod = \tokens -> case tokens of
+--       (_:Token TimeGrain grain:_) ->
+--         tt . cycleNth grain $ - 1
+--       _ -> Nothing
+--   }
+
+
+
+
+
+-- ruleDurationAgo :: Rule
+-- ruleDurationAgo = Rule
+--   { name = "ultima <duration>"
+--   , pattern =
+--     [ regex "([lp]ast|next)"
+--     , dimension Duration
+--     ]
+--   , prod = \tokens -> case tokens of
+--       (Token RegexMatch (GroupMatch (match:_)):
+--        Token Duration DurationData{TDuration.grain, TDuration.value}:
+--        _) -> case Text.toLower match of
+--          "next" -> tt $ cycleN True grain value
+--          "last" -> tt $ cycleN True grain (- value)
+--          "past" -> tt $ cycleN True grain (- value)
+--          _      -> Nothing
+--       _ -> Nothing
+--   }
+
+
+
 
 ruleCeTime :: Rule
 ruleCeTime = Rule
@@ -925,7 +983,7 @@ ruleDentroDeDuration = Rule
     ]
   , prod = \tokens -> case tokens of
       (_:Token Duration dd:_) ->
-        Token Time <$> interval TTime.Open now (inDuration dd)
+        Token Time <$> interval TTime.Open now (inDuration dd) 
       _ -> Nothing
   }
 
@@ -1713,6 +1771,7 @@ rules =
   , ruleNochevieja
   , ruleNoon
   , ruleNow
+  , ruleDurationAgo
   , ruleNthTimeDeTime
   , ruleNthTimeDeTime2
   , ruleOrdinalQuarter
