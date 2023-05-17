@@ -75,44 +75,6 @@ ruleDurationAgo = Rule
       _ -> Nothing
   }
 
--- ruleGrainAgo :: Rule
--- ruleLaCyclePasado = Rule
---   { name = "la <grain> pasado"
---   , pattern =
---     [ regex "(el|los|la|las) ?"
---     , dimension TimeGrain
---     , regex "pasad(a|o)s?|(u|ú)ltim[ao]s?"
---     ]
---   , prod = \tokens -> case tokens of
---       (_:Token TimeGrain grain:_) ->
---         tt . cycleNth grain $ - 1
---       _ -> Nothing
---   }
-
-
-
-
-
--- ruleDurationAgo :: Rule
--- ruleDurationAgo = Rule
---   { name = "ultima <duration>"
---   , pattern =
---     [ regex "([lp]ast|next)"
---     , dimension Duration
---     ]
---   , prod = \tokens -> case tokens of
---       (Token RegexMatch (GroupMatch (match:_)):
---        Token Duration DurationData{TDuration.grain, TDuration.value}:
---        _) -> case Text.toLower match of
---          "next" -> tt $ cycleN True grain value
---          "last" -> tt $ cycleN True grain (- value)
---          "past" -> tt $ cycleN True grain (- value)
---          _      -> Nothing
---       _ -> Nothing
---   }
-
-
-
 
 ruleCeTime :: Rule
 ruleCeTime = Rule
